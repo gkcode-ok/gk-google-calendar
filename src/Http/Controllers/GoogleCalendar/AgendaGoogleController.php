@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\GoogleCalendar;
+namespace GKCode\GoogleCalendar\Http\Controllers\GoogleCalendar;
 
 use App\Http\Controllers\BaseController;
-use App\Models\Generic\GoogleCalendar\GoogleCalendarConnection;
-use App\Services\GoogleCalendar\GoogleCalendarEventService;
+use GKCode\GoogleCalendar\Models\GoogleCalendarConnection;
+use GKCode\GoogleCalendar\Services\GoogleCalendarEventService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;

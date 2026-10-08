@@ -1,15 +1,15 @@
 <?php
 
-namespace App\Http\Controllers\GoogleCalendar;
+namespace GKCode\GoogleCalendar\Http\Controllers\GoogleCalendar;
 
-use App\Enums\GoogleCalendarConnectionStatus as Status;
+use GKCode\GoogleCalendar\Enums\GoogleCalendarConnectionStatus as Status;
 use App\Http\Controllers\BaseController;
-use App\Models\Generic\GoogleCalendar\GoogleCalendarConnection;
+use GKCode\GoogleCalendar\Models\GoogleCalendarConnection;
 use App\Models\System\AgendaEvent;
 use App\Models\System\Company;
-use App\Services\GoogleCalendar\GkServiciosTenantService;
-use App\Services\GoogleCalendar\GkServiciosCalendarClientService;
-use App\Services\GoogleCalendar\GoogleCalendarSyncService;
+use GKCode\GoogleCalendar\Services\GkServiciosTenantService;
+use GKCode\GoogleCalendar\Services\GkServiciosCalendarClientService;
+use GKCode\GoogleCalendar\Services\GoogleCalendarSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -69,7 +69,7 @@ class GoogleCalendarConnectionController extends BaseController
             $created = $this->client->createIntegration(
                 'Nexora - ' . $user->name,
                 [],
-                ['calendar_timezone' => config('services.gkservicios.timezone')]
+                ['calendar_timezone' => config('google-calendar.gkservicios.timezone')]
             );
 
             if (!$created['ok']) {
@@ -194,7 +194,7 @@ class GoogleCalendarConnectionController extends BaseController
         $calendar = (array) ($remote['payload']['calendar'] ?? $remote['payload']);
         $connection->calendar_id = $data['calendar_id'];
         $connection->calendar_summary = $calendar['summary'] ?? $data['calendar_id'];
-        $connection->calendar_timezone = $calendar['timeZone'] ?? config('services.gkservicios.timezone');
+        $connection->calendar_timezone = $calendar['timeZone'] ?? config('google-calendar.gkservicios.timezone');
         $connection->save();
 
         return ['status' => 0, 'descripcion' => 'Calendario guardado correctamente.', 'data' => $this->present($connection)];

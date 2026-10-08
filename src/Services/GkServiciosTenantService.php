@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Services\GoogleCalendar;
+namespace GKCode\GoogleCalendar\Services;
 
-use App\Models\Generic\GoogleCalendar\GkServiciosSetting;
-use App\Models\Generic\GoogleCalendar\GkServiciosTenant;
+use GKCode\GoogleCalendar\Models\GkServiciosSetting;
+use GKCode\GoogleCalendar\Models\GkServiciosTenant;
 use App\Models\System\Company;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
@@ -18,7 +18,7 @@ class GkServiciosTenantService
 {
     public function hasRegistrationConfig(): bool
     {
-        return rtrim((string) config('services.gkservicios.base_url'), '/') !== ''
+        return rtrim((string) config('google-calendar.gkservicios.base_url'), '/') !== ''
             && $this->registrationToken() !== '';
     }
 
@@ -27,7 +27,7 @@ class GkServiciosTenantService
     {
         $stored = GkServiciosSetting::query()->value('registration_token');
 
-        return (string) ($stored ?: config('services.gkservicios.registration_token'));
+        return (string) ($stored ?: config('google-calendar.gkservicios.registration_token'));
     }
 
     public function catalogIds(): array
@@ -35,8 +35,8 @@ class GkServiciosTenantService
         $setting = GkServiciosSetting::query()->first();
 
         return [
-            'provider_id' => (int) ($setting?->google_provider_id ?: config('services.gkservicios.google_calendar_provider_id')),
-            'service_id' => (int) ($setting?->google_calendar_service_id ?: config('services.gkservicios.google_calendar_service_id')),
+            'provider_id' => (int) ($setting?->google_provider_id ?: config('google-calendar.gkservicios.google_calendar_provider_id')),
+            'service_id' => (int) ($setting?->google_calendar_service_id ?: config('google-calendar.gkservicios.google_calendar_service_id')),
             'saved' => (bool) ($setting?->google_provider_id && $setting?->google_calendar_service_id),
         ];
     }
@@ -67,7 +67,7 @@ class GkServiciosTenantService
             return ['ok' => false, 'error' => $catalog['error']];
         }
 
-        $baseUrl = rtrim((string) config('services.gkservicios.base_url'), '/');
+        $baseUrl = rtrim((string) config('google-calendar.gkservicios.base_url'), '/');
         if ($baseUrl === '') {
             return ['ok' => false, 'error' => 'Falta GK_SERVICIOS_URL en el .env.'];
         }
@@ -103,7 +103,7 @@ class GkServiciosTenantService
      */
     public function discoverCatalogIds(string $adminToken): array
     {
-        $baseUrl = rtrim((string) config('services.gkservicios.base_url'), '/');
+        $baseUrl = rtrim((string) config('google-calendar.gkservicios.base_url'), '/');
         $fail = fn (string $m) => ['ok' => false, 'error' => $m, 'provider_id' => 0, 'service_id' => 0];
         $http = fn () => Http::acceptJson()->timeout(20)->withToken(trim($adminToken))
             ->withHeaders(['X-Request-ID' => (string) Str::uuid()]);
@@ -174,7 +174,7 @@ class GkServiciosTenantService
             $response = Http::acceptJson()->asJson()->timeout(20)
                 ->withToken($this->registrationToken())
                 ->withHeaders(['X-Request-ID' => $requestId])
-                ->post(rtrim((string) config('services.gkservicios.base_url'), '/') . '/tenants/register', [
+                ->post(rtrim((string) config('google-calendar.gkservicios.base_url'), '/') . '/tenants/register', [
                     'name' => $company->name,
                     'external_id' => (string) $company->id,
                 ]);

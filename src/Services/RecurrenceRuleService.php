@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\GoogleCalendar;
+namespace GKCode\GoogleCalendar\Services;
 
 use Carbon\Carbon;
 use Carbon\CarbonInterface;

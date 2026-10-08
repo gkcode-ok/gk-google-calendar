@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Models\Generic\GoogleCalendar;
+namespace  GKCode\GoogleCalendar\Models;
 
-use App\Enums\GoogleCalendarConnectionStatus;
+use GKCode\GoogleCalendar\Enums\GoogleCalendarConnectionStatus;
 use App\Models\Generic\User;
 use App\Models\ModelGeneral;
 use App\Models\System\Company;

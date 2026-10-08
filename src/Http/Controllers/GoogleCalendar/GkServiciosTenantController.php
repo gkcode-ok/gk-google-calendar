@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Controllers\GoogleCalendar;
+namespace GKCode\GoogleCalendar\Http\Controllers\GoogleCalendar;
 
 use App\Http\Controllers\BaseController;
-use App\Models\Generic\GoogleCalendar\GkServiciosTenant;
+use GKCode\GoogleCalendar\Models\GkServiciosTenant;
 use App\Models\System\Company;
-use App\Services\GoogleCalendar\GkServiciosTenantService;
+use GKCode\GoogleCalendar\Services\GkServiciosTenantService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 

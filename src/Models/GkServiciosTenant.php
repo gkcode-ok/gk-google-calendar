@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models\Generic\GoogleCalendar;
+namespace  GKCode\GoogleCalendar\Models;
 
 use App\Models\ModelGeneral;
 use App\Models\System\Company;

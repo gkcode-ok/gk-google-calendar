@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Services\GoogleCalendar;
+namespace GKCode\GoogleCalendar\Services;
 
-use App\Enums\GoogleSyncStatus;
-use App\Models\Generic\GoogleCalendar\GoogleCalendarConnection;
+use GKCode\GoogleCalendar\Enums\GoogleSyncStatus;
+use GKCode\GoogleCalendar\Models\GoogleCalendarConnection;
 use App\Models\System\AgendaEvent;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Log;
@@ -162,7 +162,7 @@ class GoogleCalendarSyncService
         ?CarbonInterface $endsAt,
         ?string $location = null
     ): ?array {
-        $timezone = $connection->calendar_timezone ?: config('services.gkservicios.timezone');
+        $timezone = $connection->calendar_timezone ?: config('google-calendar.gkservicios.timezone');
         $start = $startsAt->copy()->setTimezone($timezone);
         $end = $endsAt
             ? $endsAt->copy()->setTimezone($timezone)

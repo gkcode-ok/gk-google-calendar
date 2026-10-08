@@ -1,8 +1,8 @@
 <?php
 
-use App\Http\Controllers\GoogleCalendar\AgendaGoogleController;
-use App\Http\Controllers\GoogleCalendar\GoogleCalendarConnectionController;
-use App\Http\Controllers\GoogleCalendar\GkServiciosTenantController;
+use GKCode\GoogleCalendar\Http\Controllers\GoogleCalendar\AgendaGoogleController;
+use GKCode\GoogleCalendar\Http\Controllers\GoogleCalendar\GoogleCalendarConnectionController;
+use GKCode\GoogleCalendar\Http\Controllers\GoogleCalendar\GkServiciosTenantController;
 use Illuminate\Support\Facades\Route;
 
 Route::group(['prefix' => '/GoogleCalendarTenant', 'middleware' => ['ensure.root']], function () {

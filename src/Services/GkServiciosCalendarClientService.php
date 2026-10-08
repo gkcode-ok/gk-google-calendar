@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Services\GoogleCalendar;
+namespace GKCode\GoogleCalendar\Services;
 
-use App\Models\Generic\GoogleCalendar\GkServiciosTenant;
+use GKCode\GoogleCalendar\Models\GkServiciosTenant;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
@@ -216,6 +216,6 @@ class GkServiciosCalendarClientService
 
     private function baseUrl(): string
     {
-        return rtrim((string) config('services.gkservicios.base_url'), '/');
+        return rtrim((string) config('google-calendar.gkservicios.base_url'), '/');
     }
 }

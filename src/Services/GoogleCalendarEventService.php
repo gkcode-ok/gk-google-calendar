@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Services\GoogleCalendar;
+namespace GKCode\GoogleCalendar\Services;
 
-use App\Models\Generic\GoogleCalendar\GoogleCalendarConnection;
+use GKCode\GoogleCalendar\Models\GoogleCalendarConnection;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 
@@ -29,7 +29,7 @@ class GoogleCalendarEventService
 
     public function timezone(GoogleCalendarConnection $connection): string
     {
-        return $connection->calendar_timezone ?: config('services.gkservicios.timezone');
+        return $connection->calendar_timezone ?: config('google-calendar.gkservicios.timezone');
     }
 
     /**
