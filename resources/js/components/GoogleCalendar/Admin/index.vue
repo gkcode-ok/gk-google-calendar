@@ -83,7 +83,7 @@ import {
     getData
 } from "@GKModule/ComponentFuc";
 
-import ChipEstado from '../../ChipEstado/index.vue';
+import ChipEstado from '@Components/Otros/ChipEstado/index.vue';
 
 const object = ref({ data: [] });
 const objAcceso = ref({ lectura: true, creacion: true, modificacion: true, eliminar: true });

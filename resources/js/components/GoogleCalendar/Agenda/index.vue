@@ -108,7 +108,7 @@ import {
 
 import Crud from './Crud/button.vue';
 import CrudComponent from './Crud/crud.vue';
-import BotonEliminar from "../../BtnDelete/index.vue";
+import BotonEliminar from "@Components/Otros/BtnDelete/index.vue";
 import GoogleStyleCalendar from '../../Calendar/GoogleStyleCalendar.vue';
 import RecurrenceScopeDialog from './Crud/RecurrenceScopeDialog.vue';
 

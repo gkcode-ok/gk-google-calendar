@@ -1,4 +1,3 @@
-```vue
 <template>
   <div class="month-calendar">
 

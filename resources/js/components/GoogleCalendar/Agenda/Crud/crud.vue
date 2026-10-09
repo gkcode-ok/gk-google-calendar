@@ -1,4 +1,3 @@
-```vue
 <template>
   <ContenedorCrud
     :modal="'Crud'"
