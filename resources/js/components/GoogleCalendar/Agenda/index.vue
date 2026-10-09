@@ -104,7 +104,7 @@ import {
     buscar as buscarUtil,
     toUpdate as toUpdateUtil,
     getData
-} from "../../../../gk-module/ComponentFuc";
+} from "@GKModule/ComponentFuc";
 
 import Crud from './Crud/button.vue';
 import CrudComponent from './Crud/crud.vue';

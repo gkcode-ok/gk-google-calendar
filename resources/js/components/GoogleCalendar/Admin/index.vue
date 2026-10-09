@@ -81,7 +81,7 @@ import {
     buscar as buscarUtil,
     pagination as paginationUtil,
     getData
-} from "../../../../gk-module/ComponentFuc";
+} from "@GKModule/ComponentFuc";
 
 import ChipEstado from '../../ChipEstado/index.vue';
 
