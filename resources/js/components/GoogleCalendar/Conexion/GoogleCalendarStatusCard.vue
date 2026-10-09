@@ -6,7 +6,6 @@
         <div class="font-weight-bold">Google Calendar</div>
         <div class="text-caption text-medium-emphasis">Sincroniza tu agenda con tu calendario de Google.</div>
       </div>
-      <ArcaStatusChip :state="chip.state" :text="chip.text" />
     </div>
 
     <v-alert v-if="data.last_error" type="error" variant="tonal" density="compact" class="mb-3">{{ data.last_error }}</v-alert>
@@ -36,7 +35,6 @@
 
 <script setup>
 import { computed } from 'vue';
-import ArcaStatusChip from '../../Arca/ArcaStatusChip.vue';
 
 const props = defineProps({
   data: { type: Object, default: () => ({ status: 'not_configured' }) },
