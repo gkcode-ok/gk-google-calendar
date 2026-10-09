@@ -21,7 +21,7 @@ class GoogleCalendarServiceProvider extends ServiceProvider
         ], 'google-calendar-config');
 
         $this->loadRoutesFrom(
-            __DIR__ . '/../routes/googleCalendarRoute/web.php'
+            __DIR__ . '/../routes/googleCalendar/web.php'
         );
 
         $this->loadMigrationsFrom(
