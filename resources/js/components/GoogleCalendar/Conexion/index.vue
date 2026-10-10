@@ -57,7 +57,7 @@ onBeforeUnmount(stopPolling);
 async function loadEstado() {
   loading.value = true;
   try {
-    const result = await $gkaxios.get('/home/GoogleCalendar/estado');
+    const result = await $gkaxios.get('/GoogleCalendar/estado');
     if (result?.status === 0) status.value = result.data;
   } catch (e) {
     notify('No se pudo cargar el estado de Google Calendar.', 'error');
@@ -73,7 +73,7 @@ async function conectar() {
   const ventana = window.open('', '_blank');
 
   try {
-    const result = await $gkaxios.post('/home/GoogleCalendar/conectar', {});
+    const result = await $gkaxios.post('/GoogleCalendar/conectar', {});
     console.log('Navegando a la URL de autorización:', result);
     console.log('Respuesta conectar Google:', result);
     console.log('Authorization URL:', result?.authorization_url);
@@ -136,7 +136,7 @@ function stopPolling() {
 
 async function verificar(silent = false) {
   try {
-    const result = await $gkaxios.get('/home/GoogleCalendar/oauth-status');
+    const result = await $gkaxios.get('/GoogleCalendar/oauth-status');
     if (result?.data) status.value = result.data;
     if (result?.status !== 0) throw new Error(result?.descripcion);
     if (status.value.status === 'connected') {
@@ -160,7 +160,7 @@ function onSaved(data) {
 async function desconectar() {
   disconnecting.value = true;
   try {
-    const result = await $gkaxios.put('/home/GoogleCalendar/desconectar');
+    const result = await $gkaxios.put('/GoogleCalendar/desconectar');
     if (result?.status !== 0) throw new Error(result?.descripcion);
     status.value = result.data;
     disconnectOpen.value = false;

@@ -117,7 +117,7 @@ const $gkaxios = appContext.config.globalProperties.$gkaxios;
 const dataContext = reactive(getData());
 
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-const basePage = '/home/GoogleCalendar/agenda';
+const basePage = '/GoogleCalendar/agenda';
 
 const object = ref({ data: [] });
 const objAcceso = ref({});

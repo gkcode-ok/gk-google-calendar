@@ -40,7 +40,7 @@ watch(model, async (open) => {
   error.value = '';
   loading.value = true;
   try {
-    const result = await $gkaxios.get('/home/GoogleCalendar/calendarios');
+    const result = await $gkaxios.get('/GoogleCalendar/calendarios');
     if (result?.status !== 0) throw new Error(result?.descripcion);
     calendars.value = result.data || [];
     selected.value = props.current || calendars.value.find((c) => c.primary)?.id || null;
@@ -54,7 +54,7 @@ watch(model, async (open) => {
 async function save() {
   saving.value = true;
   try {
-    const result = await $gkaxios.post('/home/GoogleCalendar/calendario-principal', { calendar_id: selected.value });
+    const result = await $gkaxios.post('/GoogleCalendar/calendario-principal', { calendar_id: selected.value });
     if (result?.status !== 0) throw new Error(result?.descripcion);
     emit('saved', result.data);
     model.value = false;
