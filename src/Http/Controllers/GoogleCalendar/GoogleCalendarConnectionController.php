@@ -43,6 +43,10 @@ class GoogleCalendarConnectionController extends BaseController
     {
         $user = Auth::user();
 
+        if (!$user) {
+            return ['status' => -1, 'descripcion' => 'Sesion no valida; vuelve a iniciar sesion.'];
+        }
+
         if (!$user->company_id) {
             return ['status' => -1, 'descripcion' => 'Tu usuario no pertenece a una empresa; ingresa con un usuario de empresa para conectar Google Calendar.'];
         }
@@ -203,6 +207,9 @@ class GoogleCalendarConnectionController extends BaseController
     public function sincronizarEvento($id): array
     {
         $user = Auth::user();
+        if (!$user) {
+            return ['status' => -1, 'descripcion' => 'Sesion no valida; vuelve a iniciar sesion.'];
+        }
         $event = AgendaEvent::where('company_id', $user->company_id)->where('user_id', $user->id)->find($id);
         if (!$event) {
             return ['status' => -1, 'descripcion' => 'Evento no encontrado'];
@@ -246,6 +253,9 @@ class GoogleCalendarConnectionController extends BaseController
     private function currentConnection(): ?GoogleCalendarConnection
     {
         $user = Auth::user();
+        if (!$user) {
+            return null;
+        }
 
         return GoogleCalendarConnection::withoutGlobalScopes()
             ->where('company_id', $user->company_id)
