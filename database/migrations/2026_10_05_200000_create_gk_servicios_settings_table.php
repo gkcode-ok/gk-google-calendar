@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('gk_servicios_settings')) {
+            return;
+        }
+
         Schema::create('gk_servicios_settings', function (Blueprint $table) {
             $table->id();
             $table->text('registration_token')->nullable();

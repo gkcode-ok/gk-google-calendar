@@ -8,10 +8,25 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('google_calendar_connections')) {
+            return;
+        }
+
         Schema::create('google_calendar_connections', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+
+            if (Schema::hasTable('companies')) {
+                $table->foreignId('company_id')->nullable()->default(1)->constrained('companies')->cascadeOnDelete();
+            } else {
+                $table->unsignedBigInteger('company_id')->nullable()->default(1)->index();
+            }
+
+            if (Schema::hasTable('users')) {
+                $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            } else {
+                $table->unsignedBigInteger('user_id')->index();
+            }
+
             $table->unsignedBigInteger('external_integration_id')->nullable();
             $table->string('name', 190)->nullable();
             $table->enum('status', ['not_configured', 'pending', 'connected', 'disconnected', 'error'])->default('not_configured');

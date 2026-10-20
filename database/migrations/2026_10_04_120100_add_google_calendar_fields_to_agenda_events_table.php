@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (!Schema::hasTable('agenda_events') || Schema::hasColumn('agenda_events', 'google_event_id')) {
+            return;
+        }
+
         Schema::table('agenda_events', function (Blueprint $table) {
             $table->foreignId('google_calendar_connection_id')->nullable()->constrained('google_calendar_connections')->nullOnDelete();
             $table->string('google_calendar_id', 190)->nullable();
@@ -25,6 +29,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (!Schema::hasTable('agenda_events') || !Schema::hasColumn('agenda_events', 'google_event_id')) {
+            return;
+        }
+
         Schema::table('agenda_events', function (Blueprint $table) {
             $table->dropIndex('agenda_events_google_sync_idx');
             $table->dropIndex(['google_event_id']);

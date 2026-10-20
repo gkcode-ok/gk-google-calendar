@@ -4,8 +4,8 @@ namespace GKCode\GoogleCalendar\Services;
 
 use GKCode\GoogleCalendar\Enums\GoogleSyncStatus;
 use GKCode\GoogleCalendar\Models\GoogleCalendarConnection;
-use App\Models\System\AgendaEvent;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -20,8 +20,10 @@ class GoogleCalendarSyncService
     {
     }
 
-    public function connectionFor(int $companyId, int $userId): ?GoogleCalendarConnection
+    public function connectionFor(?int $companyId, int $userId): ?GoogleCalendarConnection
     {
+        $companyId = $companyId ?: (int) config('google-calendar.default_company_id', 1);
+
         $connection = GoogleCalendarConnection::withoutGlobalScopes()
             ->where('company_id', $companyId)
             ->where('user_id', $userId)
@@ -34,9 +36,9 @@ class GoogleCalendarSyncService
      * Crea o actualiza el evento remoto. Devuelve el resultado normalizado del cliente
      * o null si no corresponde sincronizar (sin conexion activa).
      */
-    public function sync(AgendaEvent $event): ?array
+    public function sync(Model $event): ?array
     {
-        $connection = $this->connectionFor($event->company_id, $event->user_id);
+        $connection = $this->connectionFor($event->company_id ?? null, (int) $event->user_id);
         if (!$connection) {
             return null;
         }
@@ -90,13 +92,13 @@ class GoogleCalendarSyncService
     /**
      * Elimina el evento remoto antes del borrado local. Devuelve null si no hay nada que borrar.
      */
-    public function deleteRemote(AgendaEvent $event): ?array
+    public function deleteRemote(Model $event): ?array
     {
         if (!$event->google_event_id) {
             return null;
         }
 
-        $connection = $this->connectionFor($event->company_id, $event->user_id);
+        $connection = $this->connectionFor($event->company_id ?? null, (int) $event->user_id);
         if (!$connection) {
             return null;
         }
@@ -120,7 +122,7 @@ class GoogleCalendarSyncService
         return $result;
     }
 
-    private function removeRemote(AgendaEvent $event, GoogleCalendarConnection $connection): array
+    private function removeRemote(Model $event, GoogleCalendarConnection $connection): array
     {
         $result = $this->deleteRemote($event) ?? ['ok' => true];
 
@@ -140,7 +142,7 @@ class GoogleCalendarSyncService
         return $this->markError($event, $result['error'], $result);
     }
 
-    private function buildPayload(AgendaEvent $event, GoogleCalendarConnection $connection): ?array
+    private function buildPayload(Model $event, GoogleCalendarConnection $connection): ?array
     {
         return $this->payload(
             $connection,
@@ -183,7 +185,7 @@ class GoogleCalendarSyncService
         ], fn ($value) => $value !== '' && $value !== null);
     }
 
-    private function markError(AgendaEvent $event, ?string $message, array $result = []): array
+    private function markError(Model $event, ?string $message, array $result = []): array
     {
         $event->forceFill([
             'google_sync_status' => GoogleSyncStatus::ERROR,
@@ -195,10 +197,10 @@ class GoogleCalendarSyncService
         return $result ?: ['ok' => false, 'payload' => null, 'error' => $message, 'code' => 'VALIDATION', 'status' => 422];
     }
 
-    private function logError(AgendaEvent $event, array $result): void
+    private function logError(Model $event, array $result): void
     {
         Log::warning('GoogleCalendar sync fallo', [
-            'company_id' => $event->company_id,
+            'company_id' => $event->company_id ?? null,
             'user_id' => $event->user_id,
             'agenda_event_id' => $event->id,
             'code' => $result['code'] ?? null,

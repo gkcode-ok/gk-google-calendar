@@ -4,18 +4,53 @@ namespace GKCode\GoogleCalendar\Services;
 
 use GKCode\GoogleCalendar\Models\GkServiciosSetting;
 use GKCode\GoogleCalendar\Models\GkServiciosTenant;
-use App\Models\System\Company;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
  * Alta y habilitacion de empresas (tenants) en GK Servicios.
- * Las credenciales del tenant se guardan cifradas por empresa, nunca en el .env.
+ * Soporta proyectos multi-empresa (tabla companies) y mono-empresa (default_company_id = 1).
  */
 class GkServiciosTenantService
 {
+    public function isMultiCompanyProject(): bool
+    {
+        $companyClass = config('google-calendar.models.company', 'App\\Models\\System\\Company');
+
+        return class_exists($companyClass) && Schema::hasTable('companies');
+    }
+
+    public function resolveCompanyId(?object $user = null): int
+    {
+        $user = $user ?? Auth::user();
+        if ($user && !empty($user->company_id)) {
+            return (int) $user->company_id;
+        }
+
+        if (!$this->isMultiCompanyProject()) {
+            return (int) config('google-calendar.default_company_id', 1);
+        }
+
+        return 0;
+    }
+
+    public function resolveCompanyName(int $companyId): string
+    {
+        if ($this->isMultiCompanyProject()) {
+            $companyClass = config('google-calendar.models.company', 'App\\Models\\System\\Company');
+            $company = $companyClass::find($companyId);
+            if ($company && !empty($company->name)) {
+                return (string) $company->name;
+            }
+        }
+
+        return (string) config('app.name', 'Nexora');
+    }
+
     public function hasRegistrationConfig(): bool
     {
         return rtrim((string) config('google-calendar.gkservicios.base_url'), '/') !== ''
@@ -135,7 +170,6 @@ class GkServiciosTenantService
     private function findBySlug(mixed $json, string $slug): ?array
     {
         $list = (array) $json;
-        // Tolera respuestas con envoltorio (data / data.data / items).
         foreach (['data', 'data', 'items'] as $key) {
             if (isset($list[$key]) && is_array($list[$key])) {
                 $list = $list[$key];
@@ -151,11 +185,19 @@ class GkServiciosTenantService
         return null;
     }
 
-    public function enable(Company $company): array
+    /**
+     * Habilita una empresa recibiendo modelo o arreglo/objeto con id y name.
+     */
+    public function enable(object $company): array
     {
-        $tenant = GkServiciosTenant::firstOrNew(['company_id' => $company->id]);
+        return $this->enableById((int) $company->id, (string) ($company->name ?? config('app.name', 'Nexora')));
+    }
 
-        // GK solo entrega las credenciales una vez; si ya existen se reutilizan.
+    public function enableById(int $companyId, ?string $companyName = null): array
+    {
+        $companyName = $companyName ?: $this->resolveCompanyName($companyId);
+        $tenant = GkServiciosTenant::firstOrNew(['company_id' => $companyId]);
+
         if ($tenant->hasCredentials()) {
             $tenant->status = 'enabled';
             $tenant->last_error = null;
@@ -175,13 +217,13 @@ class GkServiciosTenantService
                 ->withToken($this->registrationToken())
                 ->withHeaders(['X-Request-ID' => $requestId])
                 ->post(rtrim((string) config('google-calendar.gkservicios.base_url'), '/') . '/tenants/register', [
-                    'name' => $company->name,
-                    'external_id' => (string) $company->id,
+                    'name' => $companyName,
+                    'external_id' => (string) $companyId,
                 ]);
         } catch (ConnectionException $e) {
-            Log::warning('GKServicios registro sin conexion', ['company_id' => $company->id, 'request_id' => $requestId]);
+            Log::warning('GKServicios registro sin conexion', ['company_id' => $companyId, 'request_id' => $requestId]);
 
-            return $this->fail($tenant, $company, 'No fue posible comunicarse con GK Servicios.');
+            return $this->fail($tenant, $companyId, $companyName, 'No fue posible comunicarse con GK Servicios.');
         }
 
         $json = (array) $response->json();
@@ -191,7 +233,7 @@ class GkServiciosTenantService
             $code = $json['error']['code'] ?? null;
             $message = $json['error']['message'] ?? $json['descripcion'] ?? 'Respuesta incompleta de GK Servicios.';
             Log::warning('GKServicios registro fallido', [
-                'company_id' => $company->id,
+                'company_id' => $companyId,
                 'http_status' => $response->status(),
                 'code' => $code,
                 'request_id' => $json['error']['request_id'] ?? $requestId,
@@ -201,12 +243,12 @@ class GkServiciosTenantService
                 $message = 'La empresa ya esta registrada en GK Servicios y las credenciales no pueden recuperarse. Solicita su reinicio en GK Servicios.';
             }
 
-            return $this->fail($tenant, $company, $message);
+            return $this->fail($tenant, $companyId, $companyName, $message);
         }
 
         $tenant->fill([
-            'name' => $company->name,
-            'external_tenant_id' => (string) $company->id,
+            'name' => $companyName,
+            'external_tenant_id' => (string) $companyId,
             'client_id' => $data['client_id'],
             'client_secret' => $data['client_secret'],
             'tenant_token' => $data['tenant_token'],
@@ -218,13 +260,21 @@ class GkServiciosTenantService
         return ['ok' => true, 'tenant' => $tenant, 'error' => null];
     }
 
-    public function disable(Company $company): bool
+    public function disable(object $company): bool
     {
-        return GkServiciosTenant::where('company_id', $company->id)->update(['status' => 'disabled']) > 0;
+        return $this->disableById((int) $company->id);
+    }
+
+    public function disableById(int $companyId): bool
+    {
+        return GkServiciosTenant::where('company_id', $companyId)->update(['status' => 'disabled']) > 0;
     }
 
     public function forCompany(?int $companyId): ?GkServiciosTenant
     {
+        if (!$companyId) {
+            $companyId = $this->resolveCompanyId();
+        }
         if (!$companyId) {
             return null;
         }
@@ -234,10 +284,10 @@ class GkServiciosTenantService
         return $tenant && $tenant->isEnabled() ? $tenant : null;
     }
 
-    private function fail(GkServiciosTenant $tenant, Company $company, string $message): array
+    private function fail(GkServiciosTenant $tenant, int $companyId, string $companyName, string $message): array
     {
-        $tenant->name = $company->name;
-        $tenant->external_tenant_id = (string) $company->id;
+        $tenant->name = $companyName;
+        $tenant->external_tenant_id = (string) $companyId;
         $tenant->status = 'error';
         $tenant->last_error = $message;
         $tenant->save();

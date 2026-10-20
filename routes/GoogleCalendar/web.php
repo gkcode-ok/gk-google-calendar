@@ -5,9 +5,32 @@ use GKCode\GoogleCalendar\Http\Controllers\GoogleCalendar\GoogleCalendarConnecti
 use GKCode\GoogleCalendar\Http\Controllers\GoogleCalendar\GkServiciosTenantController;
 use Illuminate\Support\Facades\Route;
 
+/**
+ * Filtra la lista de middlewares para incluir solo los que esten registrados
+ * en el Router del proyecto anfitrión (haciendo el paquete compatible con cualquier proyecto).
+ */
+$resolveMiddleware = static function (array $desired): array {
+    $router = app('router');
+    $aliases = method_exists($router, 'getMiddleware') ? array_keys($router->getMiddleware()) : [];
+    $groups = method_exists($router, 'getMiddlewareGroups') ? array_keys($router->getMiddlewareGroups()) : ['web', 'api'];
+    $available = array_merge($aliases, $groups);
+
+    return array_values(array_filter($desired, fn (string $m) => in_array($m, $available, true)));
+};
+
+$prefix = rtrim((string) config('google-calendar.route_prefix', '/home'), '/');
+
+$adminMiddlewares = $resolveMiddleware(
+    (array) config('google-calendar.middleware.admin', ['web', 'auth', 'verified', 'estadoverificar', 'blockip', 'isnotclient', 'ensure.root'])
+);
+
+$userMiddlewares = $resolveMiddleware(
+    (array) config('google-calendar.middleware.user', ['web', 'auth', 'verified', 'estadoverificar', 'blockip', 'isnotclient'])
+);
+
 Route::group([
-    'prefix' => '/home/GoogleCalendarTenant',
-    'middleware' => ['web', 'auth', 'verified', 'estadoverificar', 'blockip', 'isnotclient', 'ensure.root'],
+    'prefix' => $prefix . '/GoogleCalendarTenant',
+    'middleware' => $adminMiddlewares,
 ], function () {
     Route::get('/data', [GkServiciosTenantController::class, 'index'])->name('GoogleCalendarTenant.index');
     Route::post('/generar-token', [GkServiciosTenantController::class, 'generarToken'])->name('GoogleCalendarTenant.generarToken');
@@ -18,8 +41,8 @@ Route::group([
 });
 
 Route::group([
-    'prefix' => '/home/GoogleCalendar',
-    'middleware' => ['web', 'auth', 'verified', 'estadoverificar', 'blockip', 'isnotclient'],
+    'prefix' => $prefix . '/GoogleCalendar',
+    'middleware' => $userMiddlewares,
 ], function () {
     Route::get('/estado', [GoogleCalendarConnectionController::class, 'estado'])->name('GoogleCalendar.estado');
     Route::post('/conectar', [GoogleCalendarConnectionController::class, 'conectar'])->name('GoogleCalendar.conectar');

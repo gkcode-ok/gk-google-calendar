@@ -29,10 +29,11 @@ class GoogleCalendarServiceProvider extends ServiceProvider
             __DIR__ . '/../database/migrations'
         );
 
-        if (class_exists(\App\Models\System\Company::class)) {
-            \App\Models\System\Company::resolveRelationUsing(
+        $companyClass = config('google-calendar.models.company', 'App\\Models\\System\\Company');
+        if (is_string($companyClass) && class_exists($companyClass) && method_exists($companyClass, 'resolveRelationUsing')) {
+            $companyClass::resolveRelationUsing(
                 'gkServiciosTenant',
-                fn (\App\Models\System\Company $company) => $company->hasOne(GkServiciosTenant::class, 'company_id')
+                fn ($company) => $company->hasOne(GkServiciosTenant::class, 'company_id')
             );
         }
     }

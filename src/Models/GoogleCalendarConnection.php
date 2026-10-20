@@ -3,15 +3,10 @@
 namespace GKCode\GoogleCalendar\Models;
 
 use GKCode\GoogleCalendar\Enums\GoogleCalendarConnectionStatus;
-use App\Models\Generic\User;
-use App\Models\ModelGeneral;
-use App\Models\System\Company;
-use App\Traits\BelongsToCompany;
+use Illuminate\Database\Eloquent\Model;
 
-class GoogleCalendarConnection extends ModelGeneral
+class GoogleCalendarConnection extends Model
 {
-    use BelongsToCompany;
-
     protected $table = 'google_calendar_connections';
 
     protected $fillable = [
@@ -47,12 +42,22 @@ class GoogleCalendarConnection extends ModelGeneral
 
     public function company()
     {
-        return $this->belongsTo(Company::class, 'company_id');
+        $companyClass = config('google-calendar.models.company', 'App\\Models\\System\\Company');
+        if (class_exists($companyClass)) {
+            return $this->belongsTo($companyClass, 'company_id');
+        }
+
+        return null;
     }
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        $userClass = config('google-calendar.models.user', 'App\\Models\\Generic\\User');
+        if (!class_exists($userClass) && class_exists('App\\Models\\User')) {
+            $userClass = 'App\\Models\\User';
+        }
+
+        return $this->belongsTo($userClass, 'user_id');
     }
 
     public function isConnected(): bool
@@ -62,6 +67,12 @@ class GoogleCalendarConnection extends ModelGeneral
 
     public static function generalConfig(string $titulo = 'Google Calendar', string $icon = 'mdi-google'): array
     {
-        return parent::generalConfig($titulo, $icon);
+        return [
+            'estado' => [
+                ['id' => '', 'nombre' => 'Todos', 'color' => '', 'select' => true],
+            ],
+            'titulo' => $titulo,
+            'icon' => $icon,
+        ];
     }
 }

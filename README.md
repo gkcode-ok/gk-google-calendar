@@ -1,30 +1,28 @@
 # GK-Google-Calendar (`gkcode-ok/gk-google-calendar`)
 
-Paquete de integración de **Google Calendar** mediante OAuth 2.0 y la API intermedia **GK Servicios** para proyectos basados en **GK Nexora** (Laravel + Vue 3). Permite administrar empresas habilitadas (tenants), vincular la cuenta de Google de cada usuario, elegir su calendario principal y ofrecer el calendario actual del usuario dentro de la aplicación (vistas Mes/Semana/Día/Lista, eventos simples y recurrentes, recordatorios y sincronización con la agenda local).
+Paquete universal de integración de **Google Calendar** mediante OAuth 2.0 y la API intermedia **GK Servicios** para aplicaciones **Laravel + Vue 3**.
+
+Está diseñado para funcionar **en cualquier proyecto**:
+- **Proyectos Multi-Empresa** (ej. `GK-Nexora`, `nexora-estudio` con tabla `companies`).
+- **Proyectos Mono-Empresa / Estándar** (sin tabla `companies` ni `agenda_events`: utiliza automáticamente un tenant único `default_company_id = 1` con el nombre de `APP_NAME`).
+- **Detección inteligente de Middlewares y Modelos:** no requiere `BaseController` ni `ModelGeneral` en el proyecto anfitrión, y filtra automáticamente los middlewares de las rutas según los que existan registrados en el proyecto.
 
 ---
 
 ## 📋 Requisitos previos
 
-El proyecto anfitrión (ej. `GK-Nexora` o `nexora-estudio`) debe contar con:
+El proyecto anfitrión debe contar con:
 - PHP `^8.2`
 - Laravel `^10.0 | ^11.0 | ^12.0`
-- Clases base del ecosistema GK:
-  - `App\Http\Controllers\BaseController`
-  - `App\Models\ModelGeneral`
-  - `App\Models\System\Company`
-  - `App\Models\System\AgendaEvent`
-  - `App\Models\Generic\User`
-  - `App\Traits\BelongsToCompany`
-- Middlewares del ecosistema GK: `['web', 'auth', 'verified', 'estadoverificar', 'blockip', 'isnotclient']` y `ensure.root` (para el panel de administración de tenants).
+- Vue 3 + Vuetify 3 (con los alias `@Components` y `@GKModule` del entorno GK)
 
 ---
 
-## 🚀 1. Instalación por Composer
+## 🚀 1. Instalación por Composer y Versionado Semántico (SemVer)
 
 ### A. Agregar el repositorio en `composer.json` del proyecto principal
 
-En el `composer.json` de tu proyecto Laravel (por ejemplo `GK-Nexora` o `nexora-estudio`), agrega el repositorio VCS:
+En el `composer.json` de tu proyecto Laravel, agrega el repositorio VCS:
 
 ```json
 "repositories": [
@@ -37,26 +35,45 @@ En el `composer.json` de tu proyecto Laravel (por ejemplo `GK-Nexora` o `nexora-
 
 *(Si estás probándolo localmente antes de subirlo a GitHub, puedes usar `"type": "path"` y `"url": "../gk-google-calendar"`).*
 
-### B. Instalar el paquete
+### B. Crear versiones (Tags en Git) para no usar `:dev-main`
 
-Ejecuta en la terminal del proyecto principal:
+Para dejar de usar `:dev-main` y trabajar con **versiones estables** (`^1.0`, `^1.1`, etc.):
+
+1. **No pongas el campo `"version"` dentro del `composer.json` del paquete** (Composer lee la versión automáticamente desde los tags de Git).
+2. Cada vez que cierres una versión estable en este repositorio (`gk-google-calendar`), etiquetala y subila a GitHub:
+   ```bash
+   git add .
+   git commit -m "Release v1.0.0"
+   git tag -a v1.0.0 -m "Versión 1.0.0"
+   git push origin main --tags
+   ```
+3. Para futuras actualizaciones:
+   - **Parche / Fix (`v1.0.1`)**: corrección de bugs compatibles.
+   - **Menor (`v1.1.0`)**: nuevas funcionalidades compatibles.
+   - **Mayor (`v2.0.0`)**: cambios que rompen compatibilidad.
+
+### C. Instalar el paquete en el proyecto anfitrión
+
+Con versión estable (recomendado):
 
 ```bash
-composer require gkcode-ok/gk-google-calendar:dev-main
+composer require gkcode-ok/gk-google-calendar:^1.0
 ```
 
-> **Nota:** Gracias al *Package Auto-Discovery* de Laravel, el proveedor `GKCode\GoogleCalendar\GoogleCalendarServiceProvider` se registrará automáticamente sin necesidad de agregarlo manualmente en `config/app.php`. Además, registra automáticamente la relación `gkServiciosTenant` sobre `App\Models\System\Company`.
+*(O si estás en desarrollo sobre la rama `main` sin tag: `composer require gkcode-ok/gk-google-calendar:dev-main`).*
+
+> **Nota:** Gracias al *Package Auto-Discovery* de Laravel, el proveedor `GKCode\GoogleCalendar\GoogleCalendarServiceProvider` se registrará automáticamente sin necesidad de agregarlo manualmente en `config/app.php`.
 
 ---
 
 ## 🗄️ 2. Migraciones de Base de Datos
 
-El paquete carga automáticamente sus migraciones desde `database/migrations`:
-1. `2026_10_04_120000_create_google_calendar_connections_table` (`google_calendar_connections`)
-2. `2026_10_04_120100_add_google_calendar_fields_to_agenda_events_table` (campos de sincronización en `agenda_events`)
-3. `2026_10_04_130000_create_gk_servicios_tenants_table` (`gk_servicios_tenants`)
-4. `2026_10_05_200000_create_gk_servicios_settings_table` (`gk_servicios_settings`)
-5. `2026_10_05_210000_add_catalog_ids_to_gk_servicios_settings_table` (IDs de catálogo en `gk_servicios_settings`)
+El paquete carga automáticamente sus migraciones desde `database/migrations`, verificando la existencia de tablas previas para adaptarse a cualquier proyecto:
+1. `2026_10_04_120000_create_google_calendar_connections_table` (`google_calendar_connections` — adapta `company_id` automáticamente si el proyecto tiene o no tabla `companies`).
+2. `2026_10_04_120100_add_google_calendar_fields_to_agenda_events_table` (solo se ejecuta si el proyecto cuenta con la tabla local `agenda_events`).
+3. `2026_10_04_130000_create_gk_servicios_tenants_table` (`gk_servicios_tenants`).
+4. `2026_10_05_200000_create_gk_servicios_settings_table` (`gk_servicios_settings`).
+5. `2026_10_05_210000_add_catalog_ids_to_gk_servicios_settings_table` (IDs de catálogo en `gk_servicios_settings`).
 
 Ejecuta las migraciones:
 
@@ -79,10 +96,20 @@ El paquete fusiona automáticamente su configuración bajo la clave `google-cale
 
 ```php
 return [
-    'timezone' => env(
-        'GK_SERVICIOS_TIMEZONE',
-        'America/Argentina/Buenos_Aires'
-    ),
+    'timezone' => env('GK_SERVICIOS_TIMEZONE', 'America/Argentina/Buenos_Aires'),
+    'route_prefix' => env('GOOGLE_CALENDAR_ROUTE_PREFIX', '/home'),
+    'default_company_id' => (int) env('GOOGLE_CALENDAR_DEFAULT_COMPANY_ID', 1),
+
+    'models' => [
+        'company' => env('GOOGLE_CALENDAR_COMPANY_MODEL', 'App\\Models\\System\\Company'),
+        'user' => env('GOOGLE_CALENDAR_USER_MODEL', 'App\\Models\\Generic\\User'),
+        'agenda_event' => env('GOOGLE_CALENDAR_AGENDA_EVENT_MODEL', 'App\\Models\\System\\AgendaEvent'),
+    ],
+
+    'middleware' => [
+        'user' => ['web', 'auth', 'verified', 'estadoverificar', 'blockip', 'isnotclient'],
+        'admin' => ['web', 'auth', 'verified', 'estadoverificar', 'blockip', 'isnotclient', 'ensure.root'],
+    ],
 
     'gkservicios' => [
         'base_url' => rtrim((string) env('GK_SERVICIOS_URL', 'https://gkservicios.gk-code.com/api/v1'), '/'),
@@ -151,7 +178,7 @@ export default {
 | Nombre en `imports.js` | Ruta del componente | Función en la aplicación |
 | :--- | :--- | :--- |
 | **`AgendaGoogle`** | `@GoogleCalendar/GoogleCalendar/Agenda/index.vue` | **Agenda + Conexión Google Calendar (Unificado):** si el usuario aún no vinculó su cuenta, muestra el asistente de conexión OAuth 2.0 estilo Google Workspace; una vez conectado, muestra su calendario actual (vistas Mes, Semana, Día y Agenda/Lista, ABM de eventos simples/recurrentes y recordatorios) junto con el panel desplegable para cambiar de calendario o desvincular la cuenta. |
-| **`GoogleCalendarTenant`** | `@GoogleCalendar/GoogleCalendar/Admin/index.vue` | **Administración ROOT de empresas (Tenants):** permite generar el token de registro con GK Servicios y habilitar/deshabilitar empresas para usar Google Calendar. |
+| **`GoogleCalendarTenant`** | `@GoogleCalendar/GoogleCalendar/Admin/index.vue` | **Administración ROOT de empresas (Tenants):** permite generar el token de registro con GK Servicios y habilitar/deshabilitar empresas (o la instancia única si el proyecto es mono-empresa) para usar Google Calendar. |
 
 *(Opcionalmente, si algún proyecto requiere montar el panel de conexión por separado, `@GoogleCalendar/GoogleCalendar/Conexion/index.vue` sigue funcionando de forma independiente, al igual que los calendarios base `@GoogleCalendar/Calendar/GoogleStyleCalendar.vue` y `@GoogleCalendar/Calendar/MonthCalendar.vue`).*
 
@@ -196,7 +223,7 @@ Si el proyecto donde lo estás instalando ya tenía una versión local anterior 
 ## 🛣️ Endpoints incluidos automáticamente
 
 ### 1. Conexión del usuario y Calendario actual (`/home/GoogleCalendar`)
-Registradas con los middlewares `['web', 'auth', 'verified', 'estadoverificar', 'blockip', 'isnotclient']`:
+Registradas con los middlewares configurados disponibles en el proyecto (`['web', 'auth', 'verified', 'estadoverificar', 'blockip', 'isnotclient']`):
 
 | Método | Ruta | Nombre de ruta | Descripción |
 | :--- | :--- | :--- | :--- |
@@ -214,11 +241,11 @@ Registradas con los middlewares `['web', 'auth', 'verified', 'estadoverificar', 
 | `DELETE` | `/home/GoogleCalendar/agenda/{eventId}` | `GoogleCalendar.agenda.destroy` | Elimina un evento o serie recurrente (`instance`, `following`, `all`) |
 
 ### 2. Administración de empresas / Tenants (`/home/GoogleCalendarTenant`)
-Registradas con los middlewares `['web', 'auth', 'verified', 'estadoverificar', 'blockip', 'isnotclient', 'ensure.root']` (exclusivo ROOT):
+Registradas con los middlewares de administración disponibles en el proyecto (`['web', 'auth', 'verified', 'estadoverificar', 'blockip', 'isnotclient', 'ensure.root']`):
 
 | Método | Ruta | Nombre de ruta | Descripción |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/home/GoogleCalendarTenant/data` | `GoogleCalendarTenant.index` | Listado paginado de empresas y su estado de habilitación en GK Servicios |
+| `GET` | `/home/GoogleCalendarTenant/data` | `GoogleCalendarTenant.index` | Listado paginado de empresas (o instancia única) y su estado en GK Servicios |
 | `POST` | `/home/GoogleCalendarTenant/generar-token` | `GoogleCalendarTenant.generarToken` | Genera el token de registro y descubre los IDs de catálogo usando el token admin |
 | `POST` | `/home/GoogleCalendarTenant/catalogo` | `GoogleCalendarTenant.catalogo` | Guarda manualmente `provider_id` y `service_id` del catálogo |
 | `POST` | `/home/GoogleCalendarTenant/token` | `GoogleCalendarTenant.token` | Guarda manualmente el `registration_token` de GK Servicios |

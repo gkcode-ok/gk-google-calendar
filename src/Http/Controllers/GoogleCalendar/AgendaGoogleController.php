@@ -2,23 +2,25 @@
 
 namespace GKCode\GoogleCalendar\Http\Controllers\GoogleCalendar;
 
-use App\Http\Controllers\BaseController;
 use GKCode\GoogleCalendar\Models\GoogleCalendarConnection;
+use GKCode\GoogleCalendar\Services\GkServiciosTenantService;
 use GKCode\GoogleCalendar\Services\GoogleCalendarEventService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
-class AgendaGoogleController extends BaseController
+class AgendaGoogleController extends BaseCalendarController
 {
     protected $modelo = 'Agenda Google';
     protected $mainModel = GoogleCalendarConnection::class;
 
-    private const NOT_CONNECTED = 'Google Calendar no esta conectado. Configuralo desde Configuracion > Google Calendar.';
+    private const NOT_CONNECTED = 'Google Calendar no esta conectado. Vincula tu cuenta desde el panel superior.';
 
-    public function __construct(private readonly GoogleCalendarEventService $events)
-    {
+    public function __construct(
+        private readonly GoogleCalendarEventService $events,
+        private readonly GkServiciosTenantService $tenants
+    ) {
     }
 
     public function index(Request $request): array
@@ -161,7 +163,12 @@ class AgendaGoogleController extends BaseController
     private function connection(): ?GoogleCalendarConnection
     {
         $user = Auth::user();
+        if (!$user) {
+            return null;
+        }
 
-        return $this->events->connectionFor($user->company_id, $user->id);
+        $companyId = $this->tenants->resolveCompanyId($user);
+
+        return $this->events->connectionFor($companyId, (int) $user->id);
     }
 }

@@ -22,7 +22,7 @@ class GoogleCalendarEventService
     ) {
     }
 
-    public function connectionFor(int $companyId, int $userId): ?GoogleCalendarConnection
+    public function connectionFor(?int $companyId, int $userId): ?GoogleCalendarConnection
     {
         return $this->sync->connectionFor($companyId, $userId);
     }

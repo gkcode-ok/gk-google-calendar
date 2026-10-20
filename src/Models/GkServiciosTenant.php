@@ -2,10 +2,9 @@
 
 namespace GKCode\GoogleCalendar\Models;
 
-use App\Models\ModelGeneral;
-use App\Models\System\Company;
+use Illuminate\Database\Eloquent\Model;
 
-class GkServiciosTenant extends ModelGeneral
+class GkServiciosTenant extends Model
 {
     protected $table = 'gk_servicios_tenants';
 
@@ -33,12 +32,17 @@ class GkServiciosTenant extends ModelGeneral
 
     public function company()
     {
-        return $this->belongsTo(Company::class, 'company_id');
+        $companyClass = config('google-calendar.models.company', 'App\\Models\\System\\Company');
+        if (class_exists($companyClass)) {
+            return $this->belongsTo($companyClass, 'company_id');
+        }
+
+        return null;
     }
 
     public function hasCredentials(): bool
     {
-        return $this->client_id && $this->client_secret && $this->tenant_token;
+        return !empty($this->client_id) && !empty($this->client_secret) && !empty($this->tenant_token);
     }
 
     public function isEnabled(): bool
@@ -48,6 +52,12 @@ class GkServiciosTenant extends ModelGeneral
 
     public static function generalConfig(string $titulo = 'Habilitar Google Calendar', string $icon = 'mdi-calendar-sync'): array
     {
-        return parent::generalConfig($titulo, $icon);
+        return [
+            'estado' => [
+                ['id' => '', 'nombre' => 'Todos', 'color' => '', 'select' => true],
+            ],
+            'titulo' => $titulo,
+            'icon' => $icon,
+        ];
     }
 }

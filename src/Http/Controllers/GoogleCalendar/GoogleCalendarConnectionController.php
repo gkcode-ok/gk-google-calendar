@@ -3,10 +3,7 @@
 namespace GKCode\GoogleCalendar\Http\Controllers\GoogleCalendar;
 
 use GKCode\GoogleCalendar\Enums\GoogleCalendarConnectionStatus as Status;
-use App\Http\Controllers\BaseController;
 use GKCode\GoogleCalendar\Models\GoogleCalendarConnection;
-use App\Models\System\AgendaEvent;
-use App\Models\System\Company;
 use GKCode\GoogleCalendar\Services\GkServiciosTenantService;
 use GKCode\GoogleCalendar\Services\GkServiciosCalendarClientService;
 use GKCode\GoogleCalendar\Services\GoogleCalendarSyncService;
@@ -15,7 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
-class GoogleCalendarConnectionController extends BaseController
+class GoogleCalendarConnectionController extends BaseCalendarController
 {
     protected $modelo = 'Conexion Google Calendar';
     protected $mainModel = GoogleCalendarConnection::class;
@@ -47,14 +44,15 @@ class GoogleCalendarConnectionController extends BaseController
             return ['status' => -1, 'descripcion' => 'Sesion no valida; vuelve a iniciar sesion.'];
         }
 
-        if (!$user->company_id) {
+        $companyId = $this->tenants->resolveCompanyId($user);
+
+        if ($companyId <= 0) {
             return ['status' => -1, 'descripcion' => 'Tu usuario no pertenece a una empresa; ingresa con un usuario de empresa para conectar Google Calendar.'];
         }
 
-        // Alta automatica en GK Servicios la primera vez que la empresa se conecta.
-        if (!$this->tenants->forCompany($user->company_id)) {
-            $company = Company::find($user->company_id);
-            $registered = $company ? $this->tenants->enable($company) : ['ok' => false, 'error' => 'Empresa no encontrada.'];
+        // Alta automatica en GK Servicios la primera vez que la empresa/sistema se conecta.
+        if (!$this->tenants->forCompany($companyId)) {
+            $registered = $this->tenants->enableById($companyId);
             if (!$registered['ok']) {
                 return ['status' => -1, 'descripcion' => 'No fue posible registrar la empresa en GK Servicios: ' . $registered['error']];
             }
@@ -65,13 +63,14 @@ class GoogleCalendarConnectionController extends BaseController
         }
 
         $connection = $this->currentConnection() ?? new GoogleCalendarConnection([
-            'company_id' => $user->company_id,
+            'company_id' => $companyId,
             'user_id' => $user->id,
         ]);
 
         if (!$connection->external_integration_id) {
+            $appName = config('app.name', 'Nexora');
             $created = $this->client->createIntegration(
-                'Nexora - ' . $user->name,
+                $appName . ' - ' . ($user->name ?? 'Usuario #' . $user->id),
                 [],
                 ['calendar_timezone' => config('google-calendar.gkservicios.timezone')]
             );
@@ -85,7 +84,7 @@ class GoogleCalendarConnectionController extends BaseController
                 return $this->fail($connection, 'GK Servicios no devolvio los datos de la integracion.');
             }
 
-            $connection->name = 'Nexora - ' . $user->name;
+            $connection->name = $appName . ' - ' . ($user->name ?? 'Usuario #' . $user->id);
             $connection->scopes_requested = $this->client->defaultScopes();
         }
 
@@ -210,7 +209,19 @@ class GoogleCalendarConnectionController extends BaseController
         if (!$user) {
             return ['status' => -1, 'descripcion' => 'Sesion no valida; vuelve a iniciar sesion.'];
         }
-        $event = AgendaEvent::where('company_id', $user->company_id)->where('user_id', $user->id)->find($id);
+
+        $agendaModel = config('google-calendar.models.agenda_event', 'App\\Models\\System\\AgendaEvent');
+        if (!class_exists($agendaModel)) {
+            return ['status' => -1, 'descripcion' => 'El modulo de Agenda local no existe en este proyecto.'];
+        }
+
+        $companyId = $this->tenants->resolveCompanyId($user);
+        $query = $agendaModel::where('user_id', $user->id);
+        if (!empty($user->company_id)) {
+            $query->where('company_id', $companyId);
+        }
+        $event = $query->find($id);
+
         if (!$event) {
             return ['status' => -1, 'descripcion' => 'Evento no encontrado'];
         }
@@ -235,7 +246,6 @@ class GoogleCalendarConnectionController extends BaseController
 
         if ($connection->external_integration_id) {
             $remote = $this->client->disconnectIntegration((int) $connection->external_integration_id);
-            // Si la integracion ya no existe en GK Servicios, igual se limpia el estado local.
             if (!$remote['ok'] && ($remote['status'] ?? null) !== 404) {
                 return $this->fail($connection, 'No fue posible desconectar: ' . $remote['error']);
             }
@@ -257,8 +267,10 @@ class GoogleCalendarConnectionController extends BaseController
             return null;
         }
 
+        $companyId = $this->tenants->resolveCompanyId($user);
+
         return GoogleCalendarConnection::withoutGlobalScopes()
-            ->where('company_id', $user->company_id)
+            ->where('company_id', $companyId)
             ->where('user_id', $user->id)
             ->first();
     }
@@ -286,7 +298,6 @@ class GoogleCalendarConnectionController extends BaseController
         ];
     }
 
-    // Solo datos no sensibles: nunca se exponen IDs externos ni credenciales.
     private function present(GoogleCalendarConnection $connection): array
     {
         return [

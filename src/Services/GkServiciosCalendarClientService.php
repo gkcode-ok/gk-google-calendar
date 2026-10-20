@@ -6,7 +6,6 @@ use GKCode\GoogleCalendar\Models\GkServiciosTenant;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -33,7 +32,7 @@ class GkServiciosCalendarClientService
 
     private function tenant(): ?GkServiciosTenant
     {
-        return $this->tenants->forCompany(Auth::user()?->company_id);
+        return $this->tenants->forCompany($this->tenants->resolveCompanyId());
     }
 
     public function defaultScopes(): array

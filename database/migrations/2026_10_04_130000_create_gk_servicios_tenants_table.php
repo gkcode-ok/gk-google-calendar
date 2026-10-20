@@ -8,9 +8,19 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('gk_servicios_tenants')) {
+            return;
+        }
+
         Schema::create('gk_servicios_tenants', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('company_id')->unique()->constrained()->cascadeOnDelete();
+
+            if (Schema::hasTable('companies')) {
+                $table->foreignId('company_id')->unique()->constrained('companies')->cascadeOnDelete();
+            } else {
+                $table->unsignedBigInteger('company_id')->default(1)->unique();
+            }
+
             $table->string('name', 190);
             $table->string('external_tenant_id', 190)->nullable();
             $table->text('client_id')->nullable();
