@@ -5,7 +5,10 @@ use GKCode\GoogleCalendar\Http\Controllers\GoogleCalendar\GoogleCalendarConnecti
 use GKCode\GoogleCalendar\Http\Controllers\GoogleCalendar\GkServiciosTenantController;
 use Illuminate\Support\Facades\Route;
 
-Route::group(['prefix' => '/GoogleCalendarTenant', 'middleware' => ['ensure.root','web']], function () {
+Route::group([
+    'prefix' => '/home/GoogleCalendarTenant',
+    'middleware' => ['web', 'auth', 'verified', 'estadoverificar', 'blockip', 'isnotclient', 'ensure.root'],
+], function () {
     Route::get('/data', [GkServiciosTenantController::class, 'index'])->name('GoogleCalendarTenant.index');
     Route::post('/generar-token', [GkServiciosTenantController::class, 'generarToken'])->name('GoogleCalendarTenant.generarToken');
     Route::post('/catalogo', [GkServiciosTenantController::class, 'guardarCatalogo'])->name('GoogleCalendarTenant.catalogo');
@@ -14,7 +17,10 @@ Route::group(['prefix' => '/GoogleCalendarTenant', 'middleware' => ['ensure.root
     Route::put('/{companyId}/deshabilitar', [GkServiciosTenantController::class, 'deshabilitar'])->name('GoogleCalendarTenant.deshabilitar');
 });
 
-Route::group(['prefix' => '/GoogleCalendar', 'middleware' => ['ensure.root']], function () {
+Route::group([
+    'prefix' => '/home/GoogleCalendar',
+    'middleware' => ['web', 'auth', 'verified', 'estadoverificar', 'blockip', 'isnotclient'],
+], function () {
     Route::get('/estado', [GoogleCalendarConnectionController::class, 'estado'])->name('GoogleCalendar.estado');
     Route::post('/conectar', [GoogleCalendarConnectionController::class, 'conectar'])->name('GoogleCalendar.conectar');
     Route::get('/oauth-status', [GoogleCalendarConnectionController::class, 'oauthStatus'])->name('GoogleCalendar.oauthStatus');

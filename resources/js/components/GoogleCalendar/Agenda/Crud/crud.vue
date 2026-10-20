@@ -586,7 +586,7 @@ const alerta = ref({ mensaje: '', visible: false, tipo: 0 });
 const scopeDialog = reactive({ open: false, action: 'save' });
 
 const page = ref(
-  '/GoogleCalendar/agenda'
+  '/home/GoogleCalendar/agenda'
 );
 
 
@@ -1364,4 +1364,3 @@ function closeModal() {
 }
 
 </style>
-```

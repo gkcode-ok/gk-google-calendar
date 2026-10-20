@@ -105,7 +105,7 @@ const TablaOpciones = reactive({
     tablaClass: "table table-striped tablaJuanClass"
 });
 
-const page = ref('/GoogleCalendarTenant/data?');
+const page = ref('/home/GoogleCalendarTenant/data?');
 
 const fields = reactive([
     { nombre: 'id', titulo: '#', tdstyle: "text-align: center", thstyle: "width:8%" },
@@ -157,7 +157,7 @@ const index = async () => {
 const generarToken = async () => {
     load.value = true;
     try {
-        const result = await $gkaxios.post('/GoogleCalendarTenant/generar-token', { admin_token: adminToken.value, name: 'Nexora' });
+        const result = await $gkaxios.post('/home/GoogleCalendarTenant/generar-token', { admin_token: adminToken.value, name: 'Nexora' });
         snackbar.color = result.status == 0 ? 'success' : 'error';
         snackbar.text = result.descripcion || 'No se pudo generar el token.';
         if (result.status == 0) {
@@ -176,7 +176,7 @@ const cambiar = async (row, accion) => {
     load.value = true;
     try {
         const method = accion === 'habilitar' ? 'post' : 'put';
-        const result = await $gkaxios[method](`/GoogleCalendarTenant/${row.id}/${accion}`, {});
+        const result = await $gkaxios[method](`/home/GoogleCalendarTenant/${row.id}/${accion}`, {});
         snackbar.color = result.status == 0 ? 'success' : 'error';
         snackbar.text = result.descripcion || (result.status == 0 ? 'Operacion realizada.' : 'No se pudo completar la operacion.');
     } catch (error) {

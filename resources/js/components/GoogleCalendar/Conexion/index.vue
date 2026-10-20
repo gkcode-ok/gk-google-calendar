@@ -1,33 +1,56 @@
 <template>
-  <ContenedorIndex comentario="Configuracion de Google Calendar" :style="'width:100%;'" class="ContenedorIndex">
-    <template #cabecera />
-    <template #icon><v-icon size="22" color="primary">mdi-google</v-icon></template>
-    <template #titulo>
-      <div class="gcal-title">
-        <span class="gcal-title__heading">Google Calendar</span>
-        <span class="gcal-title__caption">Sincroniza tu agenda con Google</span>
-      </div>
-    </template>
-    <template #main />
-    <template #Tabla>
-      <div class="gcal-page">
-        <GoogleCalendarStatusCard
-          :data="status"
-          :busy="busy"
-          @connect="conectar"
-          @verify="verificar"
-          @select-calendar="selectorOpen = true"
-          @disconnect="disconnectOpen = true"
-        />
-      </div>
-    </template>
-  </ContenedorIndex>
+  <!-- Modo embebido dentro de AgendaGoogle -->
+  <div v-if="embedded" class="gcal-admin-embedded">
+    <GoogleCalendarStatusCard
+      :data="status"
+      :busy="busy"
+      :compact="compact"
+      @connect="conectar"
+      @verify="verificar"
+      @select-calendar="selectorOpen = true"
+      @disconnect="disconnectOpen = true"
+    />
 
-  <GoogleCalendarSelector v-model="selectorOpen" :current="status.calendar_id" @saved="onSaved" />
-  <GoogleCalendarDisconnectDialog v-model="disconnectOpen" :loading="disconnecting" @confirm="desconectar" />
+    <GoogleCalendarSelector v-model="selectorOpen" :current="status.calendar_id" @saved="onSaved" />
+    <GoogleCalendarDisconnectDialog v-model="disconnectOpen" :loading="disconnecting" @confirm="desconectar" />
 
-  <Load :load="loading" />
-  <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3200">{{ snackbar.text }}</v-snackbar>
+    <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3200">
+      {{ snackbar.text }}
+    </v-snackbar>
+  </div>
+
+  <!-- Modo página independiente (retrocompatible) -->
+  <template v-else>
+    <ContenedorIndex comentario="Configuracion de Google Calendar" :style="'width:100%;'" class="ContenedorIndex">
+      <template #cabecera />
+      <template #icon><v-icon size="22" color="primary">mdi-google</v-icon></template>
+      <template #titulo>
+        <div class="gcal-title">
+          <span class="gcal-title__heading">Google Calendar</span>
+          <span class="gcal-title__caption">Sincroniza tu agenda con Google</span>
+        </div>
+      </template>
+      <template #main />
+      <template #Tabla>
+        <div class="gcal-page">
+          <GoogleCalendarStatusCard
+            :data="status"
+            :busy="busy"
+            @connect="conectar"
+            @verify="verificar"
+            @select-calendar="selectorOpen = true"
+            @disconnect="disconnectOpen = true"
+          />
+        </div>
+      </template>
+    </ContenedorIndex>
+
+    <GoogleCalendarSelector v-model="selectorOpen" :current="status.calendar_id" @saved="onSaved" />
+    <GoogleCalendarDisconnectDialog v-model="disconnectOpen" :loading="disconnecting" @confirm="desconectar" />
+
+    <Load :load="loading" />
+    <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3200">{{ snackbar.text }}</v-snackbar>
+  </template>
 </template>
 
 <script setup>
@@ -36,6 +59,14 @@ import Load from '@Components/Otros/Load/index.vue';
 import GoogleCalendarStatusCard from './GoogleCalendarStatusCard.vue';
 import GoogleCalendarSelector from './GoogleCalendarSelector.vue';
 import GoogleCalendarDisconnectDialog from './GoogleCalendarDisconnectDialog.vue';
+
+const props = defineProps({
+  embedded: { type: Boolean, default: false },
+  compact: { type: Boolean, default: false },
+  autoLoad: { type: Boolean, default: true },
+});
+
+const emit = defineEmits(['status-change', 'calendar-saved', 'disconnected']);
 
 const $gkaxios = getCurrentInstance()?.proxy?.$gkaxios;
 
@@ -51,36 +82,38 @@ const status = ref({ status: 'not_configured' });
 const snackbar = reactive({ show: false, text: '', color: 'success' });
 let pollTimer = null;
 
-onMounted(loadEstado);
+onMounted(() => {
+  if (props.autoLoad) loadEstado();
+});
 onBeforeUnmount(stopPolling);
+
+function updateStatus(next) {
+  status.value = next || { status: 'not_configured' };
+  emit('status-change', status.value);
+}
 
 async function loadEstado() {
   loading.value = true;
   try {
-    const result = await $gkaxios.get('/GoogleCalendar/estado');
-    if (result?.status === 0) status.value = result.data;
+    const result = await $gkaxios.get('/home/GoogleCalendar/estado');
+    if (result?.status === 0) updateStatus(result.data);
   } catch (e) {
     notify('No se pudo cargar el estado de Google Calendar.', 'error');
   } finally {
     loading.value = false;
   }
+  return status.value;
 }
 
 async function conectar() {
   busy.value = true;
-
-  // Abrimos inmediatamente la ventana para evitar bloqueo del navegador
   const ventana = window.open('', '_blank');
 
   try {
-    const result = await $gkaxios.post('/GoogleCalendar/conectar', {});
-    console.log('Navegando a la URL de autorización:', result);
-    console.log('Respuesta conectar Google:', result);
-    console.log('Authorization URL:', result?.authorization_url);
-    console.log('Authorization URL data:', result?.data?.authorization_url);
+    const result = await $gkaxios.post('/home/GoogleCalendar/conectar', {});
 
     if (result?.data) {
-      status.value = result.data;
+      updateStatus(result.data);
     }
 
     if (result?.status !== 0) {
@@ -93,20 +126,18 @@ async function conectar() {
 
     if (!authorizationUrl) {
       ventana?.close();
-
-      throw new Error(
-        'GK Servicios no devolvió la URL de autorización de Google.'
-      );
+      throw new Error('GK Servicios no devolvió la URL de autorización de Google.');
     }
 
-    // Ahora navegamos la pestaña que ya estaba abierta
-    ventana.location.href = result?.data?.authorization_url;
+    if (ventana) {
+      ventana.location.href = authorizationUrl;
+    } else {
+      window.open(authorizationUrl, '_blank');
+    }
 
     startPolling();
-
   } catch (e) {
     ventana?.close();
-
     notify(
       e?.response?.data?.descripcion ||
       e?.message ||
@@ -118,7 +149,6 @@ async function conectar() {
   }
 }
 
-// Consulta el estado mientras el usuario autoriza en la ventana de Google.
 function startPolling() {
   stopPolling();
   let attempts = 0;
@@ -136,8 +166,8 @@ function stopPolling() {
 
 async function verificar(silent = false) {
   try {
-    const result = await $gkaxios.get('/GoogleCalendar/oauth-status');
-    if (result?.data) status.value = result.data;
+    const result = await $gkaxios.get('/home/GoogleCalendar/oauth-status');
+    if (result?.data) updateStatus(result.data);
     if (result?.status !== 0) throw new Error(result?.descripcion);
     if (status.value.status === 'connected') {
       stopPolling();
@@ -147,24 +177,26 @@ async function verificar(silent = false) {
     }
     if (silent !== true) notify(result.descripcion, 'warning');
   } catch (e) {
-    if (silent !== true) notify(e?.response?.data?.descripcion || e?.message || 'No se pudo verificar la autorizacion.', 'error');
+    if (silent !== true) notify(e?.response?.data?.descripcion || e?.message || 'No se pudo verificar la autorización.', 'error');
   }
   return false;
 }
 
 function onSaved(data) {
-  status.value = data;
+  updateStatus(data);
   notify('Calendario guardado correctamente.');
+  emit('calendar-saved', data);
 }
 
 async function desconectar() {
   disconnecting.value = true;
   try {
-    const result = await $gkaxios.put('/GoogleCalendar/desconectar');
+    const result = await $gkaxios.put('/home/GoogleCalendar/desconectar');
     if (result?.status !== 0) throw new Error(result?.descripcion);
-    status.value = result.data;
+    updateStatus(result.data);
     disconnectOpen.value = false;
     notify('Google Calendar fue desconectado correctamente.');
+    emit('disconnected', result.data);
   } catch (e) {
     notify(e?.response?.data?.descripcion || e?.message || 'No se pudo desconectar Google Calendar.', 'error');
   } finally {
@@ -172,11 +204,23 @@ async function desconectar() {
   }
 }
 
+function openSelector() {
+  selectorOpen.value = true;
+}
+
 function notify(text, color = 'success') {
   snackbar.text = text;
   snackbar.color = color;
   snackbar.show = true;
 }
+
+defineExpose({
+  loadEstado,
+  openSelector,
+  conectar,
+  verificar,
+  status,
+});
 </script>
 
 <style scoped>
@@ -184,4 +228,5 @@ function notify(text, color = 'success') {
 .gcal-title__heading { font-weight: 900; font-size: 1rem; }
 .gcal-title__caption { font-size: .74rem; color: #607086; }
 .gcal-page { padding: 6px 2px; }
+.gcal-admin-embedded { width: 100%; }
 </style>

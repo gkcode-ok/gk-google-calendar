@@ -2,6 +2,7 @@
 
 namespace GKCode\GoogleCalendar;
 
+use GKCode\GoogleCalendar\Models\GkServiciosTenant;
 use Illuminate\Support\ServiceProvider;
 
 class GoogleCalendarServiceProvider extends ServiceProvider
@@ -27,5 +28,12 @@ class GoogleCalendarServiceProvider extends ServiceProvider
         $this->loadMigrationsFrom(
             __DIR__ . '/../database/migrations'
         );
+
+        if (class_exists(\App\Models\System\Company::class)) {
+            \App\Models\System\Company::resolveRelationUsing(
+                'gkServiciosTenant',
+                fn (\App\Models\System\Company $company) => $company->hasOne(GkServiciosTenant::class, 'company_id')
+            );
+        }
     }
 }
